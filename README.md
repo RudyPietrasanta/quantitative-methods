@@ -2,7 +2,7 @@
 
 
 
-This folder contains a few Python scripts developed \*\*as a self-taught learning project\*\*.  
+This folder contains a few Python scripts developed \*\*as a self-taught learning project\*\*.
 
 They are not production-ready, but rather work-in-progress exercises in quantitative finance and numerical methods.
 
@@ -12,27 +12,35 @@ They are not production-ready, but rather work-in-progress exercises in quantita
 
 
 
-\- \*\*SVI.py\*\*  
+\- \*\*SVI.py\*\*
 
-&nbsp; Implementation of SVI (\*Stochastic Volatility Inspired\*) interpolation.
-
-
-
-\- \*\*SSVI.py\*\*  
-
-&nbsp; Implementation of SSVI (\*Surface SVI\*) interpolation.
+  Implementation of SVI (\*Stochastic Volatility Inspired\*) interpolation.
 
 
 
-\- \*\*Heston\_utils.py\*\*  
+\- \*\*SSVI.py\*\*
 
-&nbsp; Helper functions for the \*\*Heston stochastic volatility model\*\*.
+  Implementation of SSVI (\*Surface SVI\*) interpolation.
 
 
 
-\- \*\*GaussLaguerre\_utils.py\*\*  
+\- \*\*Heston\_utils.py\*\*
 
-&nbsp; Utilities for numerical integration using \*\*Gauss–Laguerre quadrature\*\*.
+  Helper functions for the \*\*Heston stochastic volatility model\*\*.
+
+
+
+\- \*\*GaussLaguerre\_utils.py\*\*
+
+  Utilities for numerical integration using \*\*Gauss–Laguerre quadrature\*\*.
+
+
+
+\- \*\*Extended doc\*\*
+
+  PDF with the extended proofs and documentation.
+
+
 
 
 
@@ -40,9 +48,9 @@ They are not production-ready, but rather work-in-progress exercises in quantita
 
 
 
-\- All scripts are written as part of an ongoing self-study journey.  
+\- All scripts are written as part of an ongoing self-study journey.
 
-\- The main goal is to better understand pricing models and numerical techniques used in quantitative finance.  
+\- The main goal is to better understand pricing models and numerical techniques used in quantitative finance.
 
 \- Code is evolving and may contain simplifications, mistakes, or naïve approaches.
 
@@ -52,11 +60,9 @@ They are not production-ready, but rather work-in-progress exercises in quantita
 
 
 
-\- Improve documentation and examples.  
+\- Improve documentation and examples.
 
-\- Add test cases and validation.  
+\- Add test cases and validation.
 
 \- Extend functionality with additional models and methods.
-
-
 
