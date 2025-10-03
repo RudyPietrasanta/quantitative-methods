@@ -29,14 +29,6 @@ def BS_put(S,K,T,sigma,r):
     C = BS_call(S, K, T, sigma, r)
     return C-S+K*np.exp(-r*T)
 
-def inverse(x):
-    x = np.asarray(x)
-    if x.ndim == 0:      # scalare
-        return 1.0 / x
-    elif x.ndim == 2:    # matrice
-        return np.linalg.inv(x)
-    else:
-        raise ValueError("Solo scalari o matrici quadrate")
    
 
 # %%  Data
@@ -60,15 +52,15 @@ def monotoneCheck(C, tol = 1e-5):
 #-----------------------------------------------------------------------------
 
 r = 0.02    #Risk free interest rate
-S = 100     #Spot price (now)
+S = 100     #Spot price
 
-# Strike grid (20 valori)
+# Strike grid (20 values)
 K = np.array([80,82,84,86,88,90,92,94,96,98,100,102,104,106,108,110,112,114,116,118], dtype=float)
 
-# Maturities (4 valori)
+# Maturities (4 values)
 T = np.array([0.25, 0.5, 1.0, 2.0], dtype=float)
 
-# Prezzi call Black–Scholes coerenti (monotoni decrescenti in strike per riga)
+# Prices
 C = np.array([
 [20.738076,18.858798,17.015743,15.219468,13.482517,11.819164,10.244801, 8.774951, 7.424014, 6.203704, 5.121805, 4.181135, 3.379248, 2.708740, 2.158225, 1.713659, 1.359776, 1.081414, 0.864468, 0.696490],
 [22.555196,20.792823,19.078224,17.421818,15.834787,14.328599,12.914217,11.601092,10.396317, 9.304093, 8.325232, 7.457190, 6.694520, 6.029441, 5.452753, 4.954645, 4.525389, 4.155707, 3.837212, 3.562403],
@@ -149,44 +141,8 @@ for i in range(len(T)):
     plt.axvline(x = 0)
     plt.grid()
 
-# %% Compute the fit of theta
+# %% SVI interpolation
 
-#To be more precise, a fit can be employed
-theta = np.zeros(len(T))
-for i in range(len(T)):
-    # 5 punti più vicini a k=0
-    idx = np.argsort(np.abs(x[i, :]))[:5]          
-    # Fit w(k) ≈ a*k^2 + b*k + c  -> theta_i = w(0) = c
-    coeff = np.polyfit(x[i, idx], total_variance[i, idx], 2)
-    theta[i] = coeff[-1]
-
-#After the points w(0,T) = theta(T) are identified, they are fit.
-theta = np.maximum.accumulate(theta)
-
-def theta_interp_param(theta, T):
-    theta = np.asarray(theta)          # shape (n,)
-    T = np.asarray(T)                  # shape (n,)
-    phi = np.array([np.exp(T) - 1,T,T**2])                # shape (n,2)
-    print(np.shape(phi))
-    # alpha = (phi^T theta) / (phi^T phi)
-    param = np.linalg.inv(phi@phi.T)@(phi)@theta
-    return param
-
-def theta_interp(T,param):
-    return param[0]*(np.exp(T)-1)+param[1]*T+param[2]*T**2
-
-alpha = theta_interp_param(theta,T)
-Tmax = np.max(T)
-N_points = 1000
-theta_function_vals = np.zeros(N_points)
-for i in range(N_points):
-    theta_function_vals[i] = theta_interp(Tmax*(i/N_points),alpha)
-   
-plt.figure(3)
-plt.plot(np.linspace(0,Tmax,len(theta)),theta,'o')
-plt.plot(np.linspace(0,Tmax,len(theta_function_vals)),theta_function_vals)
-
-# %% SVI
 #-----------------------------------------------------------------------------
 #----------------------Utilities----------------------------------------------
 #-----------------------------------------------------------------------------
@@ -199,7 +155,8 @@ def wSVI(k, a, b, rho, m, sigma):
 def jacobian_terms(k, b, rho, m, sigma):
     k = np.asarray(k)
     s = np.sqrt((k - m)**2 + sigma)
-    # Derivate parziali di w(k) per parametro:
+    
+    # Derivatives of w(K) wrt parameters
     dw_da   = np.ones_like(k)
     dw_db   = rho*(k - m) + s
     dw_drho = b*(k - m)
@@ -209,21 +166,19 @@ def jacobian_terms(k, b, rho, m, sigma):
 
 def SVI_fit(k, w_data, iters=150):
    
-    # inizializzazione
+    # Init
     a, b, rho, m, sigma = 0.01, 0.1, -0.1, 0.0, 0.05  # valori ragionevoli
     loss_hist = []
 
+    #Opt. cycle
     for _ in range(iters):
         w_model = wSVI(k, a, b, rho, m, sigma)
         r = w_model - w_data  # residui
         # MSE
         loss = 0.5 * np.dot(r, r)
         loss_hist.append(loss)
-        if np.abs(loss) < 0.5e-5:
-            print('Optimization converged.')
-            break
-
-        # J^T r
+        
+        # Jacobian computation
         dw_da, dw_db, dw_drho, dw_dm, dw_dsigma = jacobian_terms(k, b, rho, m, sigma)
         J = np.column_stack([dw_da, dw_db, dw_drho, dw_dm, dw_dsigma]) #n x 5 matrix
         lam = 0.005
@@ -236,15 +191,23 @@ def SVI_fit(k, w_data, iters=150):
         m = param[3]
         sigma = param[4]
 
-        # proiezioni / clip
+        # Clip
         b   = max(b, 1e-6)
         sigma = max(sigma, 1e-8)
         rho = np.clip(rho, -0.999, 0.999)
+        
         # Lee bound: b(1+|rho|) ≤ 2
         cap = 2.0/(1.0+abs(rho))
         if b > cap: b = cap
-
+        if np.linalg.norm((J.T)@r)<1e-8: 
+            print('Optimization converged. ||J.Tr|| = '+str(np.linalg.norm((J.T)@r)))
+            break
+    
     return a, b, rho, m, sigma, loss_hist
+
+
+# %% Plots
+
 
 plt.figure()
 params = np.zeros((len(T),5))
@@ -271,4 +234,4 @@ for i in range(len(T)):
     plt.ylabel('Volatility')
     plt.legend(('SVI volatility','Market volatility'))
     plt.title('T = '+str(T[i]))
-    plt.savefig("Img_"+str(i),dpi = 600)
+    #plt.savefig("Img_"+str(i),dpi = 600)
